@@ -34,17 +34,20 @@ const updateStatus = async (req, res) => {
 };
 
 const createTask = async (req, res) => {
-  const { project_id, title, description, status, priority, due_date } = req.body;
+  const { project_id, title, priority = 'medium', due_date } = req.body;
+
+  if (!project_id || !title)
+    return res.status(400).json({ error: 'project_id and title required' });
 
   try {
     const { rows } = await db.query(
-      `INSERT INTO tasks (project_id, title, description, status, priority, due_date)
-       SELECT $1, $2, $3, $4, $5, $6
+      `INSERT INTO tasks (project_id, title, priority, due_date)
+       SELECT $1, $2, $3, $4
        FROM projects p
        JOIN clients c ON c.id = p.client_id
-       WHERE p.id = $1 AND c.user_id = $7
+       WHERE p.id = $1 AND c.user_id = $5
        RETURNING *`,
-      [project_id, title, description, status || 'todo', priority || 'medium', due_date, req.userId]
+      [project_id, title, priority, due_date || null, req.userId]
     );
 
     if (rows.length === 0)
@@ -58,23 +61,22 @@ const createTask = async (req, res) => {
 
 const updateTask = async (req, res) => {
   const { id } = req.params;
-  const { title, description, status, priority, due_date } = req.body;
+  const { title, priority, due_date, status } = req.body;
 
   try {
     const { rows } = await db.query(
       `UPDATE tasks t
-       SET title = $1,
-           description = $2,
-           status = $3,
-           priority = $4,
-           due_date = $5
+       SET title = COALESCE($1, t.title),
+           priority = COALESCE($2, t.priority),
+           due_date = COALESCE($3, t.due_date),
+           status = COALESCE($4, t.status)
        FROM projects p
        JOIN clients c ON c.id = p.client_id
        WHERE t.project_id = p.id
-         AND t.id = $6
-         AND c.user_id = $7
+         AND t.id = $5
+         AND c.user_id = $6
        RETURNING t.*`,
-      [title, description, status, priority, due_date, id, req.userId]
+      [title, priority, due_date, status, id, req.userId]
     );
 
     if (rows.length === 0)

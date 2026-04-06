@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
 import { getDeadlineInfo } from '../utils/deadline'
+import ProgressBar from '../components/ProgressBar'
 
 const STATUS_STYLES = {
   active:    'bg-green-50 text-green-700',
@@ -56,11 +57,9 @@ export default function Projects() {
               <h3 className="font-semibold mb-1">{project.title}</h3>
               <p className="text-xs text-gray-400 mb-3">{project.client_name}</p>
               {/* Progress bar */}
-              <div className="h-1.5 bg-gray-100 rounded-full mb-1">
-                <div className="h-full bg-blue-500 rounded-full" style={{width: `${pct}%`}} />
-              </div>
+              <ProgressBar pct={pct} />
               <div className="flex justify-between text-xs text-gray-400">
-                <span>{pct}% complete</span>
+                <span>{project.done_tasks || 0}/{project.total_tasks || 0} tasks done</span>
                 <span>₹{Number(project.budget).toLocaleString()}</span>
               </div>
             </div>

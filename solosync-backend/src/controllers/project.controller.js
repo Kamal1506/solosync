@@ -3,11 +3,21 @@ const db = require('../db');
 const getAllProjects = async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT p.*, c.name AS client_name
+      `SELECT
+         p.*,
+         c.name AS client_name,
+         COUNT(t.id) AS total_tasks,
+         COUNT(t.id) FILTER (WHERE t.status = 'done') AS done_tasks,
+         ROUND(
+           COUNT(t.id) FILTER (WHERE t.status = 'done') * 100.0
+           / NULLIF(COUNT(t.id), 0)
+         ) AS completion_pct
        FROM projects p
        JOIN clients c ON c.id = p.client_id
+       LEFT JOIN tasks t ON t.project_id = p.id
        WHERE c.user_id = $1
-       ORDER BY p.deadline ASC NULLS LAST, p.created_at DESC`,
+       GROUP BY p.id, c.name
+       ORDER BY p.created_at DESC`,
       [req.userId]
     );
 
